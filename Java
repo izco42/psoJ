@@ -1,0 +1,202 @@
+1. En Java TODO es una clase
+
+En Java no puede existir código suelto fuera de una clase:
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hola");
+    }
+}
+
+No se permiten funciones libres
+No existe ejecutar statements fuera de clases
+
+
+
+2. El archivo .java debe llamarse igual que la clase pública
+
+El archivo debe llamarse igual a su clase public.
+
+Debe iniciar con mayúscula por convención.
+
+Ejemplo:
+
+Particle.Java
+
+public class Particle {
+}
+
+Esto falla:
+
+particula.java
+Algo.java con clase Particle
+
+
+
+3. Compilar un archivo .java → produce un .class
+
+javac transforma código fuente en bytecode para la JVM:
+
+javac Particle.java
+
+Genera -> Particle.class
+
+Este archivo es portable: Java lo ejecuta en cualquier SO con JVM.
+
+
+
+4. Los .jar son paquetes de .class
+
+Un .jar es un ZIP que contiene .class,recursos, y un archivo MANIFEST.MF.
+
+Se usa para publicar librerías,distribuir aplicaciones.
+
+Se puede crear con Gradle:
+
+gradle jar
+
+
+
+5. Ejecutar un .java directamente (modo script)
+
+Java 11+ permite:
+
+java Particle.java
+
+✔ Compila en memoria
+✔ Ejecuta
+✔ No guarda el .class en disco
+
+Es útil para scripts o pruebas rápidas.
+
+
+
+6. Compilar con javac → persistir bytecode
+
+Si deseas crear el .class real:
+
+javac Particle.java
+java Particle
+
+✔ Se debe ejecutar sin extensión
+✔ Usa el bytecode ya guardado en disco
+
+
+
+7. Código en múltiples archivos del MISMO directorio (package default)
+
+Si todos están en la misma carpeta y NO declaras package, entonces:
+
+javac *.java
+java Main
+
+No se usan package
+✔ No se usan import
+✔ Es para proyectos simples o ejemplos
+
+
+
+8. Packages y carpetas: cómo funciona realmente
+
+Java ignora la carpeta raíz del código.
+
+
+La estructura de carpetas DESPUÉS de src/main/java/ es la que define el package.
+
+Estructura válida:
+
+
+src/
+ └─ main/
+      └─ java/
+           └─ utils/
+                └─ lib/
+                     └─ Animal.java
+
+
+Código dentro del archivo:
+
+
+package utils.lib;
+
+public class Animal {}
+
+
+Para usarla desde otro archivo:
+
+import utils.lib.Animal;
+
+
+
+9. Gradle como gestor de dependencias y constructor
+
+Gradle puede:
+
+  inicializar proyectos
+
+  compilar
+
+  ejecutar
+
+  manejar dependencias
+
+  generar JARs
+
+  correr tests
+
+Crear proyecto:
+
+  gradle init --type java-application
+
+Esto genera:
+
+  build.gradle
+  settings.gradle
+  src/main/java/App.java
+
+Agregar dependencias -> Edita build.gradle:
+
+dependencies {
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+}
+
+Gradle las descarga automáticamente -> gradle build
+
+Ejecutar la app -> gradle run
+
+Generar JAR -> gradle jar
+
+
+
+
+10. ¿Cómo no romper la cohesión del proyecto?
+
+Regla A: Mantén TODAS tus clases dentro de:
+  
+  src/main/java/
+
+Regla B: Usa una convención coherente de packages:
+
+  com.miapp
+  com.miapp.pso
+  com.miapp.utils
+  com.miapp.features.users
+  com.miapp.features.users.service
+  com.miapp.features.users.controller
+
+Regla C: El package SIEMPRE debe coincidir con la ruta
+
+Ejemplo:
+  src/main/java/com/miapp/features/users/service/UserService.java
+Debe decir:
+  package com.miapp.features.users.service;
+
+Regla D: Todos los archivos dentro de una misma carpeta deben declarar el MISMO package
+
+Ejemplo:
+    src/main/java/com/app/utils/
+      Log.java
+      MathUtils.java
+      Timer.java
+Los tres deben decir:
+    package com.app.utils;
