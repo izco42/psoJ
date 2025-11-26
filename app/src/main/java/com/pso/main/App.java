@@ -1,17 +1,17 @@
 package com.pso.main;
 
 import com.pso.core.ConstraintFunction;
-import com.pso.core.Particle;
 import com.pso.experiment.ExperimentRunner;
 import com.pso.experiment.RunResult;
 import com.pso.experiment.PlotUtils;
+import com.pso.experiment.ExperimentRunner.RunStats;
 import com.pso.functions.RastriginFunction;
 import com.pso.functions.SphereFunction;
-import com.pso.core.SwarmInitializer;
 
 import com.pso.maze.*;
 
 import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealVector;
 
 import java.util.List;
 
@@ -44,6 +44,16 @@ public class App {
 
         // SPHERE
         System.out.println("\n===== EXPERIMENTO: SPHERE =====");
+        printContinuousParams("Sphere", n, d, xMin, xMax, runs, epochs, w, c1, c2);
+
+        RunResult sphereSingle = ExperimentRunner.runSingle(
+                new SphereFunction(),
+                identity,
+                n, d, xMin, xMax,
+                w, c1, c2,
+                epochs
+        );
+        PlotUtils.plotSingleEvolution(sphereSingle.getEvolution(), "Sphere - Evolución (1 corrida)");
 
         List<RunResult> sphereResults = ExperimentRunner.runMultiple(
                 new SphereFunction(),
@@ -54,16 +64,22 @@ public class App {
                 epochs
         );
 
-        double[] sphereAvgEvolution = ExperimentRunner.averageEvolution(sphereResults, epochs);
-        double sphereAvgFinal = ExperimentRunner.averageFinalValue(sphereResults);
-
-        System.out.println("Promedio final (Sphere, 20 ejecuciones): " + sphereAvgFinal);
-
-        PlotUtils.plotAverageEvolution(sphereAvgEvolution, "Sphere - Promedio de 20 ejecuciones");
+        RunStats sphereStats = ExperimentRunner.summarizeBestValues(sphereResults);
+        printStatsTable("Sphere", sphereStats);
 
 
         // RASTRIGIN
         System.out.println("\n===== EXPERIMENTO: RASTRIGIN =====");
+        printContinuousParams("Rastrigin", n, d, xMin, xMax, runs, epochs, w, c1, c2);
+
+        RunResult rastriginSingle = ExperimentRunner.runSingle(
+                new RastriginFunction(),
+                clamp,
+                n, d, xMin, xMax,
+                w, c1, c2,
+                epochs
+        );
+        PlotUtils.plotSingleEvolution(rastriginSingle.getEvolution(), "Rastrigin - Evolución (1 corrida)");
 
         List<RunResult> rastriginResults = ExperimentRunner.runMultiple(
                 new RastriginFunction(),
@@ -74,12 +90,8 @@ public class App {
                 epochs
         );
 
-        double[] rastriginAvgEvolution = ExperimentRunner.averageEvolution(rastriginResults, epochs);
-        double rastriginAvgFinal = ExperimentRunner.averageFinalValue(rastriginResults);
-
-        System.out.println("Promedio final (Rastrigin, 20 ejecuciones): " + rastriginAvgFinal);
-
-        PlotUtils.plotAverageEvolution(rastriginAvgEvolution, "Rastrigin - Promedio de 20 ejecuciones");
+        RunStats rastriginStats = ExperimentRunner.summarizeBestValues(rastriginResults);
+        printStatsTable("Rastrigin", rastriginStats);
 
 
         //           MAZE EXPERIMENT
@@ -99,6 +111,18 @@ public class App {
         Node goal = new Node(4, 4);
 
         int pathLength = 40; // vector de movimientos
+        printMazeParams(n, pathLength, runs, epochs, w, c1, c2, 0, 3);
+
+        RunResult mazeSingle = ExperimentRunner.runSingle(
+                new MazeFitness(maze, start, goal),
+                MazeConstraints.MOVE_CONSTRAINT,
+                n,
+                pathLength,
+                0, 3,
+                w, c1, c2,
+                epochs
+        );
+        PlotUtils.plotSingleEvolution(mazeSingle.getEvolution(), "Maze - Evolución (1 corrida)");
 
         List<RunResult> mazeResults = ExperimentRunner.runMultiple(
                 new MazeFitness(maze, start, goal),
@@ -111,20 +135,46 @@ public class App {
                 epochs
         );
 
-        double[] mazeAvgEvolution = ExperimentRunner.averageEvolution(mazeResults, epochs);
-        double mazeAvgFinal = ExperimentRunner.averageFinalValue(mazeResults);
+        RunStats mazeStats = ExperimentRunner.summarizeBestValues(mazeResults);
+        printStatsTable("Maze", mazeStats);
 
-        System.out.println("Promedio final (Maze, 20 ejecuciones): " + mazeAvgFinal);
-        PlotUtils.plotAverageEvolution(mazeAvgEvolution, "Maze - Promedio de 20 ejecuciones");
-
-        // Obtener solucion final y graficarla
-        var bestParticles = SwarmInitializer.initPopulation(n, pathLength, 0, 3);
-        var pso = new com.pso.core.PSO(new MazeFitness(maze, start, goal), bestParticles, MazeConstraints.MOVE_CONSTRAINT);
-        pso.evolveWithHistory(w, c1, c2, epochs);
-
-        var simulation = PathSimulator.simulate(maze, start, goal, pso.getGlobalBestPosition());
+        // Graficar solución final usando la mejor posición de la corrida individual
+        RealVector mazeBest = new ArrayRealVector(mazeSingle.getFinalPosition());
+        var simulation = PathSimulator.simulate(maze, start, goal, mazeBest);
 
         MazePlotUtils.plotMazeAndPath(maze, simulation.path(), start, goal, "Maze Solution (PSO)");
     }
-}
 
+    private static void printContinuousParams(
+            String name,
+            int n, int d, double xMin, double xMax,
+            int runs, int epochs,
+            double w, double c1, double c2
+    ) {
+        System.out.printf(
+                "%s params -> n=%d, d=%d, xMin=%.2f, xMax=%.2f, runs=%d, epochs=%d, w=%.2f, c1=%.2f, c2=%.2f%n",
+                name, n, d, xMin, xMax, runs, epochs, w, c1, c2
+        );
+    }
+
+    private static void printMazeParams(
+            int n, int pathLength, int runs, int epochs,
+            double w, double c1, double c2,
+            int moveMin, int moveMax
+    ) {
+        System.out.printf(
+                "Maze params -> n=%d, pathLength=%d, moveRange=[%d,%d], runs=%d, epochs=%d, w=%.2f, c1=%.2f, c2=%.2f%n",
+                n, pathLength, moveMin, moveMax, runs, epochs, w, c1, c2
+        );
+    }
+
+    private static void printStatsTable(String title, RunStats stats) {
+        System.out.println("\n" + title + " - mejores valores por ejecución (runs=20)");
+        System.out.println("Ejecución\tMejor valor final");
+        for (int i = 0; i < stats.bestValues().size(); i++) {
+            System.out.printf("%2d\t\t%.6f%n", i + 1, stats.bestValues().get(i));
+        }
+        System.out.printf("Promedio: %.6f%n", stats.mean());
+        System.out.printf("Desv. estándar: %.6f%n", stats.stdDev());
+    }
+}
